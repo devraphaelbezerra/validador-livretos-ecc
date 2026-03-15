@@ -40,7 +40,7 @@
         
         <img src="https://far-peach-a8snbzt6eu.edgeone.app/ECC%2030%20Com%20Transparencia.png" alt="Logo" class="img-fluid mb-3 mx-auto d-block" style="max-height: 40px;">
         
-        <h2 class="mb-3 text-primary">ECC33 Secretaria - v1.2</h2>
+        <h2 class="mb-3 text-primary">ECC33 Secretaria - v1.3</h2>
         
         <div id="reader" class="mb-4"></div>
 
@@ -68,8 +68,8 @@
         let ultimaPaginaLida = ""; 
         let html5QrcodeScanner;
         
-        // NOVO: Controle de inatividade
         let timerInatividade = null;
+        let quadrosVazios = 0; // NOVO: Contador de "mesa vazia"
 
         // --- GERADOR DE BIPES NATIVO ---
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -101,7 +101,6 @@
                 oscillator.start();
                 oscillator.stop(audioCtx.currentTime + 0.6); 
             } else if (tipo === 'alerta') {
-                // NOVO: Bipe de atenção (diferente do erro e do sucesso)
                 oscillator.type = 'triangle';
                 oscillator.frequency.setValueAtTime(400, audioCtx.currentTime); 
                 gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
@@ -118,7 +117,7 @@
         function atualizarUI() {
             document.getElementById('paginaEsperadaDisplay').innerText = formatarPagina(paginaAtual);
             document.getElementById('mensagemStatus').innerText = `Aponte para o QR Code ${formatarPagina(paginaAtual)}`;
-            document.body.style.backgroundColor = "#f8f9fa"; // Volta ao fundo normal
+            document.body.style.backgroundColor = "#f8f9fa"; 
             iniciarCronometroInatividade();
         }
 
@@ -126,10 +125,9 @@
             clearTimeout(timerInatividade);
             if (isPausado) return;
             
-            // Se passar 4 segundos sem ler nada, emite o alerta
             timerInatividade = setTimeout(() => {
                 tocarBipe('alerta');
-                document.body.style.backgroundColor = "#fff3cd"; // Fundo amarelo claro do Bootstrap
+                document.body.style.backgroundColor = "#fff3cd"; 
                 document.getElementById('mensagemStatus').innerHTML = `⚠️ <b>Cadê o QR Code?</b><br>A página pode estar invertida!`;
             }, 4000); 
         }
@@ -137,6 +135,7 @@
         function iniciarNovoLivreto() {
             paginaAtual = 1;
             ultimaPaginaLida = ""; 
+            quadrosVazios = 0;
             retomarLeitura();
             atualizarUI();
         }
@@ -152,19 +151,18 @@
         function onScanSuccess(decodedText, decodedResult) {
             if (isPausado) return; 
 
-            // Achou qualquer QR code, paramos o cronômetro de inatividade
             clearTimeout(timerInatividade);
+            quadrosVazios = 0; // NOVO: Se leu algo, a mesa não está vazia. Zera o contador.
 
             const paginaEsperada = formatarPagina(paginaAtual);
             const lido = decodedText.trim().toUpperCase();
 
-            // Ignora se for a página que já acabou de ser computada
+            // Ignora a leitura apenas se a folha AINDA não foi retirada da mesa
             if (lido === ultimaPaginaLida) {
-                iniciarCronometroInatividade(); // Reinicia o timer já que não fez nada
+                iniciarCronometroInatividade(); 
                 return; 
             }
 
-            // TRATAMENTO DA "ARMADILHA" DA GRÁFICA (Página Invertida)
             if (lido === "INV" || lido === "INVERTIDA") {
                 isPausado = true;
                 tocarBipe('erro');
@@ -198,19 +196,29 @@
                 }
 
             } else {
-                // ERRO - Página Fora de Ordem
+                // ERRO - Página Fora de Ordem ou Duplicada!
                 isPausado = true;
                 tocarBipe('erro');
                 document.body.classList.add('flash-error');
                 setTimeout(() => document.body.classList.remove('flash-error'), 400);
                 
-                document.getElementById('mensagemStatus').innerText = `❌ ERRO: Leu ${lido}. Esperava ${paginaEsperada}.`;
+                // Agora o erro avisa claramente se a pessoa colocou uma repetida
+                document.getElementById('mensagemStatus').innerText = `❌ ERRO: Leu ${lido}. Esperava ${paginaEsperada}. (Folha fora de ordem ou repetida!)`;
                 document.getElementById('btnContinuar').classList.remove('d-none');
             }
         }
 
         function onScanFailure(error) {
-            // Apenas falhas de foco/leitura vazia, não faz nada para não poluir
+            if (isPausado) return;
+            
+            // NOVO: Conta quantos quadros a câmera passou sem enxergar nenhum QR Code
+            quadrosVazios++;
+            
+            // A 10fps, 5 quadros equivalem a meio segundo sem QR Code na tela.
+            // Isso significa que o voluntário retirou a página.
+            if (quadrosVazios > 5) {
+                ultimaPaginaLida = ""; // Apaga a memória. A mesa está livre para a próxima leitura.
+            }
         }
 
         // --- INICIALIZAR CÂMERA ---
@@ -229,5 +237,6 @@
             atualizarUI();
         });
     </script>
+
 </body>
 </html>
