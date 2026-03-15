@@ -25,40 +25,77 @@
             background-color: #fff;
         }
         
-        .status-card {
-            font-size: 1.5rem;
-            font-weight: bold;
-        }
-        
         /* Ajuste fino para esconder qualquer botão residual de arquivo caso a lib atualize */
         #reader__dashboard_section_csr span { display: none !important; } 
+
+        /* NOVO: Animação de Letreiro (Marquee) */
+        .marquee-container {
+            width: 100%;
+            overflow: hidden;
+            white-space: nowrap;
+            background-color: #e9ecef;
+            padding: 5px 0;
+            margin-bottom: 10px;
+        }
+        
+        .marquee-content {
+            display: inline-block;
+            animation: marquee 15s linear infinite;
+        }
+        
+        @keyframes marquee {
+            0% { transform: translateX(100vw); }
+            100% { transform: translateX(-100%); }
+        }
+
+        /* Otimização do Card de Status */
+        .status-compacto {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 15px;
+        }
+        
+        .pagina-numero {
+            font-size: 2.5rem;
+            font-weight: bold;
+            line-height: 1;
+        }
     </style>
 </head>
-<body class="min-vh-100 d-flex flex-column align-items-center py-4">
+<body class="min-vh-100 d-flex flex-column align-items-center py-2">
 
-    <div class="container text-center">
-        
-        <img src="https://far-peach-a8snbzt6eu.edgeone.app/ECC%2030%20Com%20Transparencia.png" alt="Logo" class="img-fluid mb-3 mx-auto d-block" style="max-height: 40px;">
-        
-        <h2 class="mb-3 text-primary">ECC33 Secretaria - v1.3</h2>
-        
-        <div id="reader" class="mb-4"></div>
+    <div class="marquee-container">
+        <div class="marquee-content">
+            <img src="https://far-peach-a8snbzt6eu.edgeone.app/ECC%2030%20Com%20Transparencia.png" alt="Logo ECC" style="max-height: 35px; margin-right: 20px;">
+            <span class="fw-bold text-secondary align-middle">Encontro de Casais com Cristo 33 - Unindo Corações</span>
+        </div>
+    </div>
 
-        <div class="card shadow-sm mb-4 mx-auto" style="max-width: 500px;">
-            <div class="card-body">
-                <p class="text-muted mb-1">Aguardando Página:</p>
-                <div class="status-card text-primary display-4" id="paginaEsperadaDisplay">01</div>
-                <p class="mt-2 mb-0" id="mensagemStatus">Aponte para o QR Code P01</p>
+    <div class="container text-center w-100" style="max-width: 500px;">
+        <h3 class="mb-2 text-primary">ECC33 Secretaria - v1.4</h3>
+        
+        <div id="reader" class="mb-3"></div>
+
+        <div class="card shadow-sm mb-3">
+            <div class="card-body status-compacto">
+                <div class="text-start">
+                    <p class="text-muted mb-0 small">Aguardando:</p>
+                    <p class="mt-1 mb-0 fw-bold" id="mensagemStatus" style="font-size: 0.9rem;">Aponte P01</p>
+                </div>
+                <div class="text-primary pagina-numero" id="paginaEsperadaDisplay">01</div>
             </div>
         </div>
 
-        <button class="btn btn-warning btn-lg mb-3 w-100" style="max-width: 500px;" onclick="iniciarNovoLivreto()">
-            🔄 Reiniciar Livreto
-        </button>
-        
-        <button id="btnContinuar" class="btn btn-danger btn-lg w-100 d-none" style="max-width: 500px;" onclick="retomarLeitura()">
-            Erro! Clique para Continuar
-        </button>
+        <div class="d-flex gap-2">
+            <button class="btn btn-warning flex-grow-1" onclick="iniciarNovoLivreto()">
+                🔄 Reiniciar Livreto
+            </button>
+            
+            <button id="btnContinuar" class="btn btn-danger flex-grow-1 d-none" onclick="retomarLeitura()">
+                ⚠️ Continuar
+            </button>
+        </div>
     </div>
 
     <script>
@@ -69,7 +106,10 @@
         let html5QrcodeScanner;
         
         let timerInatividade = null;
-        let quadrosVazios = 0; // NOVO: Contador de "mesa vazia"
+        let quadrosVazios = 0; 
+        
+        // ---> AQUI VOCÊ ALTERA O TEMPO DE INATIVIDADE (em milissegundos) <---
+        const TEMPO_ALERTA_INATIVIDADE = 7000; // Alterado para 7 segundos (7000ms)
 
         // --- GERADOR DE BIPES NATIVO ---
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -128,8 +168,8 @@
             timerInatividade = setTimeout(() => {
                 tocarBipe('alerta');
                 document.body.style.backgroundColor = "#fff3cd"; 
-                document.getElementById('mensagemStatus').innerHTML = `⚠️ <b>Cadê o QR Code?</b><br>A página pode estar invertida!`;
-            }, 4000); 
+                document.getElementById('mensagemStatus').innerHTML = `⚠️ <b>Cadê o QR Code?</b><br>Invertida?`;
+            }, TEMPO_ALERTA_INATIVIDADE); // Usando a variável configurável
         }
 
         function iniciarNovoLivreto() {
@@ -152,12 +192,11 @@
             if (isPausado) return; 
 
             clearTimeout(timerInatividade);
-            quadrosVazios = 0; // NOVO: Se leu algo, a mesa não está vazia. Zera o contador.
+            quadrosVazios = 0; 
 
             const paginaEsperada = formatarPagina(paginaAtual);
             const lido = decodedText.trim().toUpperCase();
 
-            // Ignora a leitura apenas se a folha AINDA não foi retirada da mesa
             if (lido === ultimaPaginaLida) {
                 iniciarCronometroInatividade(); 
                 return; 
@@ -169,13 +208,12 @@
                 document.body.classList.add('flash-error');
                 setTimeout(() => document.body.classList.remove('flash-error'), 400);
                 
-                document.getElementById('mensagemStatus').innerHTML = `❌ <b>PÁGINA DE CABEÇA PARA BAIXO!</b><br>Arrume e tente novamente.`;
+                document.getElementById('mensagemStatus').innerHTML = `❌ <b>PÁGINA INVERTIDA!</b>`;
                 document.getElementById('btnContinuar').classList.remove('d-none');
                 return;
             }
 
             if (lido === paginaEsperada) {
-                // SUCESSO
                 ultimaPaginaLida = lido; 
                 
                 tocarBipe('sucesso');
@@ -188,7 +226,7 @@
                     tocarBipe('final');
                     isPausado = true;
                     ultimaPaginaLida = ""; 
-                    document.getElementById('mensagemStatus').innerText = "✅ LIVRETO MONTADO COM SUCESSO!";
+                    document.getElementById('mensagemStatus').innerText = "✅ MONTADO COM SUCESSO!";
                     document.getElementById('paginaEsperadaDisplay').innerText = "FIM";
                     document.body.style.backgroundColor = "#f8f9fa";
                 } else {
@@ -196,14 +234,12 @@
                 }
 
             } else {
-                // ERRO - Página Fora de Ordem ou Duplicada!
                 isPausado = true;
                 tocarBipe('erro');
                 document.body.classList.add('flash-error');
                 setTimeout(() => document.body.classList.remove('flash-error'), 400);
                 
-                // Agora o erro avisa claramente se a pessoa colocou uma repetida
-                document.getElementById('mensagemStatus').innerText = `❌ ERRO: Leu ${lido}. Esperava ${paginaEsperada}. (Folha fora de ordem ou repetida!)`;
+                document.getElementById('mensagemStatus').innerText = `❌ ERRO: Leu ${lido}. Esperava ${paginaEsperada}.`;
                 document.getElementById('btnContinuar').classList.remove('d-none');
             }
         }
@@ -211,17 +247,13 @@
         function onScanFailure(error) {
             if (isPausado) return;
             
-            // NOVO: Conta quantos quadros a câmera passou sem enxergar nenhum QR Code
             quadrosVazios++;
             
-            // A 10fps, 5 quadros equivalem a meio segundo sem QR Code na tela.
-            // Isso significa que o voluntário retirou a página.
             if (quadrosVazios > 5) {
-                ultimaPaginaLida = ""; // Apaga a memória. A mesa está livre para a próxima leitura.
+                ultimaPaginaLida = ""; 
             }
         }
 
-        // --- INICIALIZAR CÂMERA ---
         document.addEventListener("DOMContentLoaded", function() {
             html5QrcodeScanner = new Html5QrcodeScanner(
                 "reader", 
@@ -237,6 +269,5 @@
             atualizarUI();
         });
     </script>
-
 </body>
 </html>
