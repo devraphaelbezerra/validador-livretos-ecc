@@ -72,20 +72,12 @@
 
     <div class="container text-center w-100 flex-grow-1" style="max-width: 500px;">
         
-        <div class="d-flex justify-content-center align-items-center mb-2 position-relative">
+        <div class="d-flex justify-content-center align-items-center mb-3 position-relative">
             <h3 class="m-0 text-primary">Secretaria ECC 33 - v2.1</h3>
             <button class="btn btn-sm btn-outline-secondary position-absolute end-0" data-bs-toggle="modal" data-bs-target="#modalConfig">
                 ⚙️
             </button>
         </div>
-
-        <!--
-        <div class="text-center mb-3">
-            <span id="badgeContador" class="badge bg-success rounded-pill fs-6 px-3 py-2 shadow-sm">
-                📚 0 Livretos Montados
-            </span>
-        </div>
-        -->
         
         <div id="reader" class="mb-3"></div>
 
@@ -112,8 +104,8 @@
 
     <footer class="mt-auto py-3 w-100 text-center border-top" style="background-color: #e9ecef;">
         <div class="container small text-muted">
-            <span class="fw-bold text-secondary">Desenvolvido ECC33 - Secretaria</span><br>
-             Desenvolvido por Raphael Bezerra
+            <span class="fw-bold text-secondary">IEQ Templo Labaredas de Fogo</span><br>
+            Desenvolvido para a Secretaria do ECC 33
         </div>
     </footer>
 
@@ -127,15 +119,7 @@
                 <div class="modal-body text-start">
                     <label class="form-label fw-bold text-primary">Ordem das Páginas</label>
                     <p class="small text-muted mb-2">Digite a sequência esperada, um código por linha.</p>
-                    <textarea id="textoConfiguracao" class="form-control text-uppercase" rows="6"></textarea>
-                    
-                    <hr class="my-3">
-                    
-                    <label class="form-label fw-bold text-primary">Estatísticas Locais</label>
-                    <div class="d-flex justify-content-between align-items-center bg-light p-2 rounded border">
-                        <span class="text-muted">Total finalizado: <strong id="modalContadorTexto" class="text-dark fs-5 ms-1">0</strong></span>
-                        <button class="btn btn-sm btn-outline-danger" onclick="zerarContador()">Zerar</button>
-                    </div>
+                    <textarea id="textoConfiguracao" class="form-control text-uppercase" rows="10"></textarea>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -155,31 +139,7 @@
         let timerInatividade = null;
         let quadrosVazios = 0; 
         
-        let livretosMontados = 0; // NOVO: Variável do Contador
-        
         const TEMPO_ALERTA_INATIVIDADE = 15000; 
-
-        // --- SISTEMA DE ESTATÍSTICAS (NOVO) ---
-        function carregarContador() {
-            let salvos = localStorage.getItem('ecc_livretosMontados');
-            if (salvos) {
-                livretosMontados = parseInt(salvos);
-            }
-            atualizarBadgeContador();
-        }
-
-        function atualizarBadgeContador() {
-            document.getElementById('badgeContador').innerText = `${livretosMontados} Livreto(s) Montado(s)`;
-            document.getElementById('modalContadorTexto').innerText = livretosMontados;
-        }
-
-        function zerarContador() {
-            if(confirm("Tem certeza que deseja zerar a contagem de livretos montados neste aparelho?")) {
-                livretosMontados = 0;
-                localStorage.setItem('ecc_livretosMontados', 0);
-                atualizarBadgeContador();
-            }
-        }
 
         // --- SISTEMA DE CONFIGURAÇÃO DA ORDEM ---
         function carregarConfiguracoes() {
@@ -188,14 +148,9 @@
                 listaPaginas = salva.split('\n').map(p => p.trim().toUpperCase()).filter(p => p !== "");
             } else {
                 listaPaginas = [];
-                /*
                 for(let i=1; i<=35; i++) {
                     listaPaginas.push("P" + i.toString().padStart(2, '0'));
                 }
-                */
-                for(let i=1; i<=5; i++) {
-                    listaPaginas.push("P" + i.toString().padStart(2, '0'));
-                }                
             }
             document.getElementById('textoConfiguracao').value = listaPaginas.join('\n');
         }
@@ -331,12 +286,7 @@
 
                 indiceAtual++; 
 
-                // SE CHEGOU NO FIM, CONTA +1 LIVRETO FINALIZADO!
                 if (indiceAtual >= listaPaginas.length) {
-                    livretosMontados++;
-                    localStorage.setItem('ecc_livretosMontados', livretosMontados);
-                    atualizarBadgeContador();
-
                     tocarFeedback('final');
                     isPausado = true;
                     ultimaPaginaLida = ""; 
@@ -369,7 +319,6 @@
 
         document.addEventListener("DOMContentLoaded", function() {
             carregarConfiguracoes(); 
-            carregarContador(); // NOVO: Puxa a contagem salva ao carregar a página
             
             html5QrcodeScanner = new Html5QrcodeScanner(
                 "reader", 
