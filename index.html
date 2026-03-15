@@ -73,17 +73,19 @@
     <div class="container text-center w-100 flex-grow-1" style="max-width: 500px;">
         
         <div class="d-flex justify-content-center align-items-center mb-2 position-relative">
-            <h3 class="m-0 text-primary">Secretaria ECC 33 - v2.0</h3>
+            <h3 class="m-0 text-primary">Secretaria ECC 33 - v2.1</h3>
             <button class="btn btn-sm btn-outline-secondary position-absolute end-0" data-bs-toggle="modal" data-bs-target="#modalConfig">
                 ⚙️
             </button>
         </div>
 
+        <!--
         <div class="text-center mb-3">
             <span id="badgeContador" class="badge bg-success rounded-pill fs-6 px-3 py-2 shadow-sm">
                 📚 0 Livretos Montados
             </span>
         </div>
+        -->
         
         <div id="reader" class="mb-3"></div>
 
@@ -186,9 +188,14 @@
                 listaPaginas = salva.split('\n').map(p => p.trim().toUpperCase()).filter(p => p !== "");
             } else {
                 listaPaginas = [];
+                /*
                 for(let i=1; i<=35; i++) {
                     listaPaginas.push("P" + i.toString().padStart(2, '0'));
                 }
+                */
+                for(let i=1; i<=5; i++) {
+                    listaPaginas.push("P" + i.toString().padStart(2, '0'));
+                }                
             }
             document.getElementById('textoConfiguracao').value = listaPaginas.join('\n');
         }
