@@ -70,13 +70,19 @@
         </div>
     </div>
 
-    <div class="container text-center w-100" style="max-width: 500px;">
+    <div class="container text-center w-100 flex-grow-1" style="max-width: 500px;">
         
         <div class="d-flex justify-content-center align-items-center mb-2 position-relative">
-            <h3 class="m-0 text-primary">Secretaria ECC 33 - v1.9</h3>
+            <h3 class="m-0 text-primary">Secretaria ECC 33 - v2.0</h3>
             <button class="btn btn-sm btn-outline-secondary position-absolute end-0" data-bs-toggle="modal" data-bs-target="#modalConfig">
                 ⚙️
             </button>
+        </div>
+
+        <div class="text-center mb-3">
+            <span id="badgeContador" class="badge bg-success rounded-pill fs-6 px-3 py-2 shadow-sm">
+                📚 0 Livretos Montados
+            </span>
         </div>
         
         <div id="reader" class="mb-3"></div>
@@ -91,7 +97,7 @@
             </div>
         </div>
 
-        <div class="d-flex gap-2">
+        <div class="d-flex gap-2 mb-4">
             <button class="btn btn-warning flex-grow-1" onclick="iniciarNovoLivreto()">
                 🔄 Reiniciar Livreto
             </button>
@@ -102,45 +108,83 @@
         </div>
     </div>
 
+    <footer class="mt-auto py-3 w-100 text-center border-top" style="background-color: #e9ecef;">
+        <div class="container small text-muted">
+            <span class="fw-bold text-secondary">IEQ Templo Labaredas de Fogo</span><br>
+            Desenvolvido para a Secretaria do ECC 33
+        </div>
+    </footer>
+
     <div class="modal fade" id="modalConfig" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header bg-light">
-                    <h5 class="modal-title">⚙️ Configurar Ordem das Páginas</h5>
+                    <h5 class="modal-title">⚙️ Configurações</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body">
-                    <p class="small text-muted mb-2">Digite a sequência esperada, um código por linha (ex: P01, P02...). Isso ficará salvo neste celular.</p>
-                    <textarea id="textoConfiguracao" class="form-control text-uppercase" rows="10"></textarea>
+                <div class="modal-body text-start">
+                    <label class="form-label fw-bold text-primary">Ordem das Páginas</label>
+                    <p class="small text-muted mb-2">Digite a sequência esperada, um código por linha.</p>
+                    <textarea id="textoConfiguracao" class="form-control text-uppercase" rows="6"></textarea>
+                    
+                    <hr class="my-3">
+                    
+                    <label class="form-label fw-bold text-primary">📊 Estatísticas Locais</label>
+                    <div class="d-flex justify-content-between align-items-center bg-light p-2 rounded border">
+                        <span class="text-muted">Total finalizado: <strong id="modalContadorTexto" class="text-dark fs-5 ms-1">0</strong></span>
+                        <button class="btn btn-sm btn-outline-danger" onclick="zerarContador()">Zerar</button>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-primary" onclick="salvarConfiguracoes()">Salvar e Reiniciar</button>
+                    <button type="button" class="btn btn-primary" onclick="salvarConfiguracoes()">Salvar Ordem</button>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // Variáveis Globais (Não usamos mais TOTAL_PAGINAS e paginaAtual soltos)
+        // Variáveis Globais
         let listaPaginas = [];
-        let indiceAtual = 0; // Aponta para a posição no array
+        let indiceAtual = 0; 
         let isPausado = false;
         let ultimaPaginaLida = ""; 
         let html5QrcodeScanner;
         let timerInatividade = null;
         let quadrosVazios = 0; 
         
+        let livretosMontados = 0; // NOVO: Variável do Contador
+        
         const TEMPO_ALERTA_INATIVIDADE = 15000; 
 
-        // --- SISTEMA DE CONFIGURAÇÃO (LOCAL STORAGE) ---
+        // --- SISTEMA DE ESTATÍSTICAS (NOVO) ---
+        function carregarContador() {
+            let salvos = localStorage.getItem('ecc_livretosMontados');
+            if (salvos) {
+                livretosMontados = parseInt(salvos);
+            }
+            atualizarBadgeContador();
+        }
+
+        function atualizarBadgeContador() {
+            document.getElementById('badgeContador').innerText = `📚 ${livretosMontados} Livreto(s) Montado(s)`;
+            document.getElementById('modalContadorTexto').innerText = livretosMontados;
+        }
+
+        function zerarContador() {
+            if(confirm("Tem certeza que deseja zerar a contagem de livretos montados neste aparelho?")) {
+                livretosMontados = 0;
+                localStorage.setItem('ecc_livretosMontados', 0);
+                atualizarBadgeContador();
+            }
+        }
+
+        // --- SISTEMA DE CONFIGURAÇÃO DA ORDEM ---
         function carregarConfiguracoes() {
             let salva = localStorage.getItem('sequenciaLivroECC');
             if (salva) {
-                // Se existe no celular, carrega a lista
                 listaPaginas = salva.split('\n').map(p => p.trim().toUpperCase()).filter(p => p !== "");
             } else {
-                // Se é a primeira vez, gera o padrão de P01 a P35
                 listaPaginas = [];
                 for(let i=1; i<=35; i++) {
                     listaPaginas.push("P" + i.toString().padStart(2, '0'));
@@ -154,7 +198,6 @@
             listaPaginas = texto.split('\n').map(p => p.trim().toUpperCase()).filter(p => p !== "");
             localStorage.setItem('sequenciaLivroECC', listaPaginas.join('\n'));
             
-            // Fecha o Modal
             var modal = bootstrap.Modal.getInstance(document.getElementById('modalConfig'));
             modal.hide();
             
@@ -179,18 +222,14 @@
                 oscillator.start();
                 oscillator.stop(audioCtx.currentTime + 0.1); 
             } else if (tipo === 'erro') {
-                // NOVO SOM DE ERRO: Efeito "Fail" descendente (Buzzer)
                 oscillator.type = 'sawtooth';
-                oscillator.frequency.setValueAtTime(250, audioCtx.currentTime); // Começa mais agudo
-                oscillator.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.3); // Cai rapidamente para grave
+                oscillator.frequency.setValueAtTime(250, audioCtx.currentTime); 
+                oscillator.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.3); 
                 gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
                 oscillator.start();
                 oscillator.stop(audioCtx.currentTime + 0.3); 
                 
-                // NOVA VIBRAÇÃO NO CELULAR (Padrão: vibra, pausa, vibra)
-                if (navigator.vibrate) {
-                    navigator.vibrate([200, 100, 200]);
-                }
+                if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
 
             } else if (tipo === 'final') {
                 oscillator.type = 'square';
@@ -198,7 +237,7 @@
                 gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
                 oscillator.start();
                 oscillator.stop(audioCtx.currentTime + 0.6); 
-                if (navigator.vibrate) navigator.vibrate([500]); // Vibração longa
+                if (navigator.vibrate) navigator.vibrate([500]); 
             } else if (tipo === 'alerta') {
                 oscillator.type = 'triangle';
                 oscillator.frequency.setValueAtTime(400, audioCtx.currentTime); 
@@ -208,7 +247,7 @@
             }
         }
 
-        // --- LÓGICA DO SISTEMA ATUALIZADA ---
+        // --- LÓGICA DO SISTEMA ---
         function obterPaginaEsperada() {
             return listaPaginas[indiceAtual];
         }
@@ -233,7 +272,7 @@
         }
 
         function iniciarNovoLivreto() {
-            indiceAtual = 0; // Volta para o início do array
+            indiceAtual = 0; 
             ultimaPaginaLida = ""; 
             quadrosVazios = 0;
             retomarLeitura();
@@ -276,7 +315,6 @@
                 return;
             }
 
-            // NOVA COMPARAÇÃO USANDO O ARRAY
             if (lido === paginaEsperada) {
                 ultimaPaginaLida = lido; 
                 
@@ -284,10 +322,14 @@
                 document.body.classList.add('flash-success');
                 setTimeout(() => document.body.classList.remove('flash-success'), 400); 
 
-                indiceAtual++; // Avança na lista
+                indiceAtual++; 
 
-                // Verifica se chegou no final do array configurado
+                // SE CHEGOU NO FIM, CONTA +1 LIVRETO FINALIZADO!
                 if (indiceAtual >= listaPaginas.length) {
+                    livretosMontados++;
+                    localStorage.setItem('ecc_livretosMontados', livretosMontados);
+                    atualizarBadgeContador();
+
                     tocarFeedback('final');
                     isPausado = true;
                     ultimaPaginaLida = ""; 
@@ -319,7 +361,8 @@
         }
 
         document.addEventListener("DOMContentLoaded", function() {
-            carregarConfiguracoes(); // Carrega da memória antes de iniciar
+            carregarConfiguracoes(); 
+            carregarContador(); // NOVO: Puxa a contagem salva ao carregar a página
             
             html5QrcodeScanner = new Html5QrcodeScanner(
                 "reader", 
