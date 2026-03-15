@@ -40,7 +40,7 @@
         
         <img src="https://far-peach-a8snbzt6eu.edgeone.app/ECC%2030%20Com%20Transparencia.png" alt="Logo" class="img-fluid mb-3 mx-auto d-block" style="max-height: 60px;">
         
-        <h2 class="mb-3 text-primary">ECC33 Secretaria - v1.1</h2>
+        <h2 class="mb-3 text-primary">ECC33 Secretaria - v1.2</h2>
         
         <div id="reader" class="mb-4"></div>
 
@@ -65,8 +65,11 @@
         const TOTAL_PAGINAS = 35;
         let paginaAtual = 1;
         let isPausado = false;
-        let ultimaPaginaLida = ""; // NOVO: Memória inteligente da página
+        let ultimaPaginaLida = ""; 
         let html5QrcodeScanner;
+        
+        // NOVO: Controle de inatividade
+        let timerInatividade = null;
 
         // --- GERADOR DE BIPES NATIVO ---
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -97,6 +100,13 @@
                 gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
                 oscillator.start();
                 oscillator.stop(audioCtx.currentTime + 0.6); 
+            } else if (tipo === 'alerta') {
+                // NOVO: Bipe de atenção (diferente do erro e do sucesso)
+                oscillator.type = 'triangle';
+                oscillator.frequency.setValueAtTime(400, audioCtx.currentTime); 
+                gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                oscillator.start();
+                oscillator.stop(audioCtx.currentTime + 0.2); 
             }
         }
 
@@ -108,59 +118,87 @@
         function atualizarUI() {
             document.getElementById('paginaEsperadaDisplay').innerText = formatarPagina(paginaAtual);
             document.getElementById('mensagemStatus').innerText = `Aponte para o QR Code ${formatarPagina(paginaAtual)}`;
+            document.body.style.backgroundColor = "#f8f9fa"; // Volta ao fundo normal
+            iniciarCronometroInatividade();
+        }
+
+        function iniciarCronometroInatividade() {
+            clearTimeout(timerInatividade);
+            if (isPausado) return;
+            
+            // Se passar 4 segundos sem ler nada, emite o alerta
+            timerInatividade = setTimeout(() => {
+                tocarBipe('alerta');
+                document.body.style.backgroundColor = "#fff3cd"; // Fundo amarelo claro do Bootstrap
+                document.getElementById('mensagemStatus').innerHTML = `⚠️ <b>Cadê o QR Code?</b><br>A página pode estar invertida!`;
+            }, 4000); 
         }
 
         function iniciarNovoLivreto() {
             paginaAtual = 1;
-            ultimaPaginaLida = ""; // Reseta a memória ao iniciar um novo
+            ultimaPaginaLida = ""; 
             retomarLeitura();
             atualizarUI();
         }
 
         function retomarLeitura() {
             isPausado = false;
-            // Não resetamos a ultimaPaginaLida aqui para evitar apitos duplos se o erro ainda estiver na tela
             document.getElementById('btnContinuar').classList.add('d-none');
             document.getElementById('mensagemStatus').innerText = `Aponte para o QR Code ${formatarPagina(paginaAtual)}`;
+            document.body.style.backgroundColor = "#f8f9fa";
+            iniciarCronometroInatividade();
         }
 
         function onScanSuccess(decodedText, decodedResult) {
             if (isPausado) return; 
 
+            // Achou qualquer QR code, paramos o cronômetro de inatividade
+            clearTimeout(timerInatividade);
+
             const paginaEsperada = formatarPagina(paginaAtual);
             const lido = decodedText.trim().toUpperCase();
 
-            // LÓGICA INTELIGENTE: Ignora a leitura se for a MESMA página que acabou de ser aprovada
+            // Ignora se for a página que já acabou de ser computada
             if (lido === ultimaPaginaLida) {
+                iniciarCronometroInatividade(); // Reinicia o timer já que não fez nada
                 return; 
             }
 
+            // TRATAMENTO DA "ARMADILHA" DA GRÁFICA (Página Invertida)
+            if (lido === "INV" || lido === "INVERTIDA") {
+                isPausado = true;
+                tocarBipe('erro');
+                document.body.classList.add('flash-error');
+                setTimeout(() => document.body.classList.remove('flash-error'), 400);
+                
+                document.getElementById('mensagemStatus').innerHTML = `❌ <b>PÁGINA DE CABEÇA PARA BAIXO!</b><br>Arrume e tente novamente.`;
+                document.getElementById('btnContinuar').classList.remove('d-none');
+                return;
+            }
+
             if (lido === paginaEsperada) {
-                // SUCESSO: É a página certa e diferente da anterior
-                ultimaPaginaLida = lido; // Atualiza a memória
+                // SUCESSO
+                ultimaPaginaLida = lido; 
                 
                 tocarBipe('sucesso');
                 document.body.classList.add('flash-success');
-                
-                // Feedback visual rápido, não trava mais a leitura
-                setTimeout(() => { 
-                    document.body.classList.remove('flash-success');
-                }, 400); 
+                setTimeout(() => document.body.classList.remove('flash-success'), 400); 
 
                 paginaAtual++;
 
                 if (paginaAtual > TOTAL_PAGINAS) {
                     tocarBipe('final');
                     isPausado = true;
-                    ultimaPaginaLida = ""; // Limpa a memória no fim
+                    ultimaPaginaLida = ""; 
                     document.getElementById('mensagemStatus').innerText = "✅ LIVRETO MONTADO COM SUCESSO!";
                     document.getElementById('paginaEsperadaDisplay').innerText = "FIM";
+                    document.body.style.backgroundColor = "#f8f9fa";
                 } else {
                     atualizarUI();
                 }
 
             } else {
-                // ERRO - Leu uma página totalmente fora de ordem
+                // ERRO - Página Fora de Ordem
                 isPausado = true;
                 tocarBipe('erro');
                 document.body.classList.add('flash-error');
@@ -172,7 +210,7 @@
         }
 
         function onScanFailure(error) {
-            // Ignora silenciosamente
+            // Apenas falhas de foco/leitura vazia, não faz nada para não poluir
         }
 
         // --- INICIALIZAR CÂMERA ---
