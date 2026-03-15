@@ -65,7 +65,7 @@
         const TOTAL_PAGINAS = 35;
         let paginaAtual = 1;
         let isPausado = false;
-        let emCooldown = false;
+        let ultimaPaginaLida = ""; // NOVO: Memória inteligente da página
         let html5QrcodeScanner;
 
         // --- GERADOR DE BIPES NATIVO ---
@@ -112,38 +112,47 @@
 
         function iniciarNovoLivreto() {
             paginaAtual = 1;
+            ultimaPaginaLida = ""; // Reseta a memória ao iniciar um novo
             retomarLeitura();
             atualizarUI();
         }
 
         function retomarLeitura() {
             isPausado = false;
-            emCooldown = false;
+            // Não resetamos a ultimaPaginaLida aqui para evitar apitos duplos se o erro ainda estiver na tela
             document.getElementById('btnContinuar').classList.add('d-none');
             document.getElementById('mensagemStatus').innerText = `Aponte para o QR Code ${formatarPagina(paginaAtual)}`;
         }
 
         function onScanSuccess(decodedText, decodedResult) {
-            if (isPausado || emCooldown) return; 
+            if (isPausado) return; 
 
             const paginaEsperada = formatarPagina(paginaAtual);
             const lido = decodedText.trim().toUpperCase();
 
+            // LÓGICA INTELIGENTE: Ignora a leitura se for a MESMA página que acabou de ser aprovada
+            if (lido === ultimaPaginaLida) {
+                return; 
+            }
+
             if (lido === paginaEsperada) {
-                emCooldown = true; 
+                // SUCESSO: É a página certa e diferente da anterior
+                ultimaPaginaLida = lido; // Atualiza a memória
+                
                 tocarBipe('sucesso');
                 document.body.classList.add('flash-success');
                 
+                // Feedback visual rápido, não trava mais a leitura
                 setTimeout(() => { 
                     document.body.classList.remove('flash-success');
-                    emCooldown = false; 
-                }, 1500); 
+                }, 400); 
 
                 paginaAtual++;
 
                 if (paginaAtual > TOTAL_PAGINAS) {
                     tocarBipe('final');
                     isPausado = true;
+                    ultimaPaginaLida = ""; // Limpa a memória no fim
                     document.getElementById('mensagemStatus').innerText = "✅ LIVRETO MONTADO COM SUCESSO!";
                     document.getElementById('paginaEsperadaDisplay').innerText = "FIM";
                 } else {
@@ -151,6 +160,7 @@
                 }
 
             } else {
+                // ERRO - Leu uma página totalmente fora de ordem
                 isPausado = true;
                 tocarBipe('erro');
                 document.body.classList.add('flash-error');
@@ -162,7 +172,7 @@
         }
 
         function onScanFailure(error) {
-            // Ignora quadros sem leitura
+            // Ignora silenciosamente
         }
 
         // --- INICIALIZAR CÂMERA ---
@@ -173,7 +183,6 @@
                     fps: 10, 
                     qrbox: {width: 250, height: 250}, 
                     aspectRatio: 1.0,
-                    // ESTA LINHA ABAIXO FORÇA APENAS O USO DA CÂMERA, OCULTANDO O ARQUIVO
                     supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
                 }, 
                 false
