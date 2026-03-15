@@ -110,8 +110,8 @@
 
     <footer class="mt-auto py-3 w-100 text-center border-top" style="background-color: #e9ecef;">
         <div class="container small text-muted">
-            <span class="fw-bold text-secondary">IEQ Templo Labaredas de Fogo</span><br>
-            Desenvolvido para a Secretaria do ECC 33
+            <span class="fw-bold text-secondary">Desenvolvido ECC33 - Secretaria</span><br>
+             Desenvolvido por Raphael Bezerra
         </div>
     </footer>
 
@@ -129,7 +129,7 @@
                     
                     <hr class="my-3">
                     
-                    <label class="form-label fw-bold text-primary">📊 Estatísticas Locais</label>
+                    <label class="form-label fw-bold text-primary">Estatísticas Locais</label>
                     <div class="d-flex justify-content-between align-items-center bg-light p-2 rounded border">
                         <span class="text-muted">Total finalizado: <strong id="modalContadorTexto" class="text-dark fs-5 ms-1">0</strong></span>
                         <button class="btn btn-sm btn-outline-danger" onclick="zerarContador()">Zerar</button>
@@ -167,7 +167,7 @@
         }
 
         function atualizarBadgeContador() {
-            document.getElementById('badgeContador').innerText = `📚 ${livretosMontados} Livreto(s) Montado(s)`;
+            document.getElementById('badgeContador').innerText = `${livretosMontados} Livreto(s) Montado(s)`;
             document.getElementById('modalContadorTexto').innerText = livretosMontados;
         }
 
