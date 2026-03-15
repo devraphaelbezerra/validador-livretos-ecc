@@ -104,8 +104,7 @@
 
     <footer class="mt-auto py-3 w-100 text-center border-top" style="background-color: #e9ecef;">
         <div class="container small text-muted">
-            <span class="fw-bold text-secondary">IEQ Templo Labaredas de Fogo</span><br>
-            Desenvolvido para a Secretaria do ECC 33
+            <span class="fw-bold text-secondary">Desenvolvido para a Secretaria do ECC 33</span>
         </div>
     </footer>
 
@@ -148,9 +147,14 @@
                 listaPaginas = salva.split('\n').map(p => p.trim().toUpperCase()).filter(p => p !== "");
             } else {
                 listaPaginas = [];
+                /*
                 for(let i=1; i<=35; i++) {
                     listaPaginas.push("P" + i.toString().padStart(2, '0'));
                 }
+                */
+                for(let i=1; i<=5; i++) {
+                    listaPaginas.push("P" + i.toString().padStart(2, '0'));
+                }               
             }
             document.getElementById('textoConfiguracao').value = listaPaginas.join('\n');
         }
